@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee"
+         xmlns:xsi="http://w3.org"
+         xsi:schemaLocation="https://jakarta.ee https://jakarta.ee/web-app_6_0.xsd"
+         version="6.0">
+    <!-- ==================================================================== -->
+    <!-- 1. APPLICATION SCOPE PARAMETERS (ServletContext Global Variables)     -->
+    <!-- ==================================================================== -->
+    <context-param>
+        <param-name>environmentLabel</param-name>
+        <param-value>WildFly Cluster (WSL2 Architecture Sandbox)</param-value>
+    </context-param>
+    <!-- Global Scope Database Configuration Settings -->
+    <context-param>
+        <param-name>dbUrlPath</param-name>
+        <param-value>jdbc:postgresql://localhost:5432/ee_db</param-value>
+    </context-param>
+    <context-param>
+        <param-name>dbUsername</param-name>
+        <param-value>harry</param-value>
+    </context-param>
+    <context-param>
+        <param-name>dbPassword</param-name>
+        <param-value>jboss123</param-value>
+    </context-param>
+    <!-- ==================================================================== -->
+    <!-- 2. REGISTER INTERCEPTOR CLASSES (Filter Declarations)                -->
+    <!-- ==================================================================== -->
+    <!-- Filter A: The Auditor (Tracks hits globally) -->
+    <filter>
+        <filter-name>GlobalAuditorInterceptor</filter-name>
+        <filter-class>com.learn.srv.AuditingFilter</filter-class>
+    </filter>
+    <!-- Filter B: The Guard (Secures access keys locally via FilterConfig) -->
+    <filter>
+        <filter-name>SecurityGuardInterceptor</filter-name>
+        <filter-class>com.learn.srv.SecurityFilter</filter-class>
+        <init-param>
+            <param-name>requiredSecretKey</param-name>
+            <param-value>jboss-master-key</param-value>
+        </init-param>
+    </filter>
+    <!-- ==================================================================== -->
+    <!-- 3. ACTIVATION PIPELINE MAPPINGS                                      -->
+    <!-- ==================================================================== -->
+    <!-- The physical top-to-bottom layout order here dictates exact execution sequence -->
+    <filter-mapping>
+        <filter-name>GlobalAuditorInterceptor</filter-name>
+        <url-pattern>/gateway</url-pattern>
+    </filter-mapping>
+    <filter-mapping>
+        <filter-name>SecurityGuardInterceptor</filter-name>
+        <url-pattern>/gateway</url-pattern>
+    </filter-mapping>
+    <!-- ==================================================================== -->
+    <!-- 4. SERVLET DECLARATIONS & LOCALIZED CONFIGURATIONS                   -->
+    <!-- ==================================================================== -->
+    <!-- A. Core Dashboard Controller (Protected Gateway Node) -->
+    <servlet>
+        <servlet-name>CoreDashboardController</servlet-name>
+        <servlet-class>com.learn.srv.ControllerServlet</servlet-class>
+        <init-param>
+            <param-name>componentSupportEmail</param-name>
+            <param-value>harish.admin@our-den.internal</param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>CoreDashboardController</servlet-name>
+        <url-pattern>/gateway</url-pattern>
+    </servlet-mapping>
+    <!-- B. Welcome Page Demo Servlet -->
+    <servlet>
+        <servlet-name>DemoServlet</servlet-name>
+        <servlet-class>com.learn.srv.MyFirstServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>DemoServlet</servlet-name>
+        <url-pattern>/welcome</url-pattern>
+    </servlet-mapping>
+    <!-- C. User Registration Profile Servlet -->
+    <servlet>
+        <servlet-name>RegServletAlias</servlet-name>
+        <servlet-class>com.learn.srv.RegisterServlet</servlet-class>
+        <!-- Forces WildFly to fully instantiate and run init() the exact millisecond the server boots up -->
+        <!-- The integer value indicates priority order. If you have multiple servlets, <load-on-startup>1</load-on-startup> will fire before a servlet marked with 2. -->
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RegServletAlias</servlet-name>
+        <url-pattern>/register</url-pattern>
+    </servlet-mapping>
+    <!-- Register the Error Handler Servlet Component -->
+    <servlet>
+        <servlet-name>GlobalErrorHandler</servlet-name>
+        <servlet-class>com.learn.srv.ErrorPageServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>GlobalErrorHandler</servlet-name>
+        <url-pattern>/systemErrorHandler</url-pattern>
+    </servlet-mapping>
+    <!-- Admin Data Directory Explorer Component Mapping -->
+    <servlet>
+        <servlet-name>AdminExplorerController</servlet-name>
+        <servlet-class>com.learn.srv.AdminExplorerServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>AdminExplorerController</servlet-name>
+        <url-pattern>/exploreUsers</url-pattern>
+    </servlet-mapping>
+    <!-- ==================================================================== -->
+    <!-- Map HTTP 401 Unauthorized globally to our error handler layout path -->
+    <error-page>
+        <error-code>401</error-code>
+        <location>/systemErrorHandler</location>
+    </error-page>
+    <!-- Map HTTP 404 Page Not Found globally to our error handler layout path -->
+    <error-page>
+        <error-code>404</error-code>
+        <location>/systemErrorHandler</location>
+    </error-page>
+</web-app>
